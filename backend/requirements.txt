@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+httpx
+websockets
+python-dotenv
+numpy
+scipy
+assemblyai
+algoliasearch
+google-generative  # for Gemini-compatible API proxying
