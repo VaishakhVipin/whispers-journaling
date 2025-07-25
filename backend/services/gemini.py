@@ -121,7 +121,7 @@ User query: {query}
     resp.raise_for_status()
     return resp.json()
 
-def mcp_search(query):
+def mcp_search(query, user_id=None):
     """
     Enhanced MCP tool-calling loop for Gemini:
     1. Ask Gemini to extract only the most relevant, specific search terms from the user query (not generic words), and let Gemini decide the number of terms dynamically.
@@ -180,7 +180,12 @@ def mcp_search(query):
         }
         for term in search_terms:
             print(f"Searching Algolia for term: '{term}' ...", end=' ')
-            payload_algolia = {"params": f"query={term}"}
+            # Add user_id filter if provided
+            filter_str = f"user_id:{user_id}" if user_id else None
+            if filter_str:
+                payload_algolia = {"params": f"query={term}&filters={filter_str}"}
+            else:
+                payload_algolia = {"params": f"query={term}"}
             resp_algolia = requests.post(ALGOLIA_MCP_URL, headers=headers_algolia, json=payload_algolia, timeout=10)
             resp_algolia.raise_for_status()
             hits = resp_algolia.json().get("hits", [])

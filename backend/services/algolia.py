@@ -1,33 +1,104 @@
 import os
-import requests
 from dotenv import load_dotenv
+from algoliasearch.search.client import SearchClientSync
+from typing import List, Dict, Any, Optional
 
 load_dotenv()
 
 ALGOLIA_APP_ID = os.getenv("ALGOLIA_APP_ID")
 ALGOLIA_API_KEY = os.getenv("ALGOLIA_API_KEY")
 ALGOLIA_INDEX_NAME = os.getenv("ALGOLIA_INDEX_NAME", "whispers_logs")
-ALGOLIA_MCP_URL = f"https://{ALGOLIA_APP_ID}-dsn.algolia.net/1/indexes/{ALGOLIA_INDEX_NAME}"
 
-# index a journal entry
-def index_journal(entry_dict):
-    """
-    Index a journal entry (dict) to Algolia MCP.
-    """
-    headers = {
-        "X-Algolia-API-Key": ALGOLIA_API_KEY,
-        "X-Algolia-Application-Id": ALGOLIA_APP_ID,
-        "Content-Type": "application/json"
-    }
-    url = f"{ALGOLIA_MCP_URL}"
-    resp = requests.post(url, headers=headers, json=entry_dict, timeout=10)
-    resp.raise_for_status()
-    return resp.json()
+_client: Optional[SearchClientSync] = None
 
-# search journals (delegates to gemini.py for actual search logic)
-def search_journals(query):
-    from .gemini import search_journals as gemini_search_journals
-    return gemini_search_journals(query)
+def get_client() -> SearchClientSync:
+    """
+    Get a singleton Algolia SearchClientSync instance.
+    """
+    global _client
+    if _client is None:
+        if not ALGOLIA_APP_ID or not ALGOLIA_API_KEY:
+            raise RuntimeError("Algolia credentials not set in environment variables.")
+        _client = SearchClientSync(ALGOLIA_APP_ID, ALGOLIA_API_KEY)
+    return _client
+
+def index_journal(entry: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Index a single journal entry in Algolia. Waits for task completion.
+
+    Args:
+        entry: dict with at least 'objectID', 'title', 'summary', 'tags', etc.
+    Returns:
+        Algolia response dict.
+    Raises:
+        Exception on failure.
+
+    Example:
+        entry = {"objectID": "abc123", "title": "My Day", "summary": "...", "tags": ["mood"], ...}
+        resp = index_journal(entry)
+    """
+    client = get_client()
+    try:
+        resp = client.save_object(index_name=ALGOLIA_INDEX_NAME, body=entry)
+        client.wait_for_task(index_name=ALGOLIA_INDEX_NAME, task_id=resp.task_id)
+        return resp.to_dict()
+    except Exception as e:
+        raise RuntimeError(f"Algolia indexing failed: {e}")
+
+def index_journals(entries: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Index multiple journal entries in Algolia. Waits for task completion.
+
+    Args:
+        entries: list of dicts, each with 'objectID', 'title', etc.
+    Returns:
+        Algolia response dict.
+    Raises:
+        Exception on failure.
+
+    Example:
+        entries = [{"objectID": "1", ...}, {"objectID": "2", ...}]
+        resp = index_journals(entries)
+    """
+    client = get_client()
+    try:
+        resp = client.save_objects(index_name=ALGOLIA_INDEX_NAME, body=entries)
+        client.wait_for_task(index_name=ALGOLIA_INDEX_NAME, task_id=resp.task_id)
+        return resp.to_dict()
+    except Exception as e:
+        raise RuntimeError(f"Algolia batch indexing failed: {e}")
+
+def search_journals(query: str, hits_per_page: int = 10) -> List[Dict[str, Any]]:
+    """
+    Search journal entries in Algolia index.
+
+    Args:
+        query: search string
+        hits_per_page: number of results to return
+    Returns:
+        List of journal entry dicts.
+    Raises:
+        Exception on failure.
+
+    Example:
+        results = search_journals("burnout work")
+    """
+    client = get_client()
+    try:
+        search_params = {
+            "requests": [
+                {
+                    "indexName": ALGOLIA_INDEX_NAME,
+                    "query": query,
+                    "hitsPerPage": hits_per_page
+                }
+            ]
+        }
+        resp = client.search(search_params)
+        # Algolia returns a list of results per index
+        return resp['results'][0]['hits']
+    except Exception as e:
+        raise RuntimeError(f"Algolia search failed: {e}")
 
 def _test_index_journal():
     print("Running MCP connection test for index_journal...")
