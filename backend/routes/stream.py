@@ -19,8 +19,9 @@ async def search(request: Request):
 @router.post("/summarize")
 async def summarize_text(request: Request):
     data = await request.json()
-    summary, tags = summarize(data["text"])
-    return {"summary": summary, "tags": tags}
+    text = data.get("text", "")
+    title, summary, tags = summarize(text)
+    return {"title": title, "summary": summary, "tags": tags}
 
 @router.get("/token")
 async def get_token():

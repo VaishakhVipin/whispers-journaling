@@ -36,11 +36,16 @@ def summarize(text):
     resp = requests.post(url, headers=headers, params=params, json=payload, timeout=10)
     resp.raise_for_status()
     data = resp.json()
-    # Try to parse JSON from Gemini's response
     import json as pyjson
+    import re
     try:
         response_text = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
-        parsed = pyjson.loads(response_text)
+        # Strip code block markers if present
+        cleaned = re.sub(r"^```(?:json)?|```$", "", response_text.strip(), flags=re.MULTILINE).strip()
+        parsed = pyjson.loads(cleaned)
+        # If parsed is a string, parse again
+        if isinstance(parsed, str):
+            parsed = pyjson.loads(parsed)
         title = parsed.get("title", "")
         summary = parsed.get("summary", "")
         tags = parsed.get("tags", [])
