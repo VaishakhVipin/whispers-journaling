@@ -10,7 +10,7 @@ Whispers is a voice-first journaling app powered by:
 
 🧠 <300ms Latency Streaming Transcription (AssemblyAI)
 
-💬 Claude/Gemini (Free Plan) for semantic summaries & tagging
+💬 Gemini (Free Plan) for semantic summaries & tagging
 
 🔍 Algolia MCP for instant search of your thoughts
 
