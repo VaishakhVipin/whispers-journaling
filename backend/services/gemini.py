@@ -182,27 +182,40 @@ def mcp_search(query, user_id=None):
             print(f"Searching Algolia for term: '{term}' ...", end=' ')
             # Add user_id filter if provided
             filter_str = f"user_id:{user_id}" if user_id else None
-            if filter_str:
-                payload_algolia = {"params": f"query={term}&filters={filter_str}"}
-            else:
-                payload_algolia = {"params": f"query={term}"}
-            resp_algolia = requests.post(ALGOLIA_MCP_URL, headers=headers_algolia, json=payload_algolia, timeout=10)
+            request_body = {
+                "indexName": ALGOLIA_INDEX_NAME,
+                "query": term,
+                "hitsPerPage": 10,
+                "filters": filter_str if filter_str else ""
+            }
+            payload_algolia = {
+                "requests": [request_body]
+            }
+            resp_algolia = requests.post(
+                f"https://{ALGOLIA_APP_ID}-dsn.algolia.net/1/indexes/*/queries",
+                headers=headers_algolia,
+                json=payload_algolia,
+                timeout=10
+            )
             resp_algolia.raise_for_status()
-            hits = resp_algolia.json().get("hits", [])
-            print(f"found {len(hits)} results.")
-            for hit in hits:
-                obj_id = hit.get("objectID")
-                if obj_id and obj_id not in seen_ids:
-                    # Only keep relevant fields for the API response
-                    clean_hit = {
-                        "objectID": obj_id,
-                        "title": hit.get("title", ""),
-                        "summary": hit.get("summary", ""),
-                        "tags": hit.get("tags", []),
-                        "timestamp": hit.get("timestamp", "")
-                    }
-                    algolia_results.append(clean_hit)
-                    seen_ids.add(obj_id)
+            results = resp_algolia.json().get("results", [])
+            found = 0
+            for result in results:
+                for hit in result.get("hits", []):
+                    found += 1
+                    obj_id = hit.get("objectID")
+                    if obj_id and obj_id not in seen_ids:
+                        # Only keep relevant fields for the API response
+                        clean_hit = {
+                            "objectID": obj_id,
+                            "title": hit.get("title", ""),
+                            "summary": hit.get("summary", ""),
+                            "tags": hit.get("tags", []),
+                            "timestamp": hit.get("timestamp", "")
+                        }
+                        algolia_results.append(clean_hit)
+                        seen_ids.add(obj_id)
+            print(f"found {found} results.")
     print("Final Algolia results:", algolia_results)
     # Step 3: Return both Gemini's response and Algolia results (if any), formatted
     return {

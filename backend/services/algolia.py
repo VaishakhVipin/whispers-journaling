@@ -68,38 +68,6 @@ def index_journals(entries: List[Dict[str, Any]]) -> Dict[str, Any]:
     except Exception as e:
         raise RuntimeError(f"Algolia batch indexing failed: {e}")
 
-def search_journals(query: str, hits_per_page: int = 10) -> List[Dict[str, Any]]:
-    """
-    Search journal entries in Algolia index.
-
-    Args:
-        query: search string
-        hits_per_page: number of results to return
-    Returns:
-        List of journal entry dicts.
-    Raises:
-        Exception on failure.
-
-    Example:
-        results = search_journals("burnout work")
-    """
-    client = get_client()
-    try:
-        search_params = {
-            "requests": [
-                {
-                    "indexName": ALGOLIA_INDEX_NAME,
-                    "query": query,
-                    "hitsPerPage": hits_per_page
-                }
-            ]
-        }
-        resp = client.search(search_params)
-        # Algolia returns a list of results per index
-        return resp['results'][0]['hits']
-    except Exception as e:
-        raise RuntimeError(f"Algolia search failed: {e}")
-
 def _test_index_journal():
     print("Running MCP connection test for index_journal...")
     # Subtest: Ensure Algolia SDK is NOT imported
