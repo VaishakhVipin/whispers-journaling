@@ -135,14 +135,14 @@ def mcp_search(query, user_id=None):
     headers = {"Content-Type": "application/json"}
     # Step 1: Ask Gemini to extract search terms and decide if it's a search
     extraction_prompt = (
-        "Given the following user query, do the following: "
-        "1. Decide if this is a search query about past journal entries (answer 'yes' or 'no' as 'is_search'). "
-        "2. If yes, extract a concise list of only the most relevant, specific search terms, keywords, or tags (avoid generic words like 'journal', 'diary', 'entries', 'when', 'date', etc.). Let the number of terms be dynamic, based on the query. "
-        "3. Provide a simple, direct Gemini response to the query as 'gemini_response'. "
-        "Return ONLY a valid JSON object with keys: 'is_search' (yes/no), 'search_terms' (list), and 'gemini_response' (string). "
-        "Do NOT include any markdown, code block, or extra text. "
-        "Example: For the query 'when was I burnt out', good search_terms would be ['burnt out', 'burnout', 'exhaustion', 'stress'], not ['journal', 'date', 'when', 'entries']. "
-        f"\n\nUser query: {query}"
+        "You are an AI assistant for a journaling app. "
+        "When the user asks a question about their past journals, "
+        "ALWAYS use the search_algolia tool to find relevant entries. "
+        "ONLY answer using the results from the tool. "
+        "If the tool returns results, summarize or present them to the user. "
+        "If the tool returns no results, say 'I couldn't find any matching entries.' "
+        "Do NOT answer from your own knowledge or say you don't have access. "
+        f"User query: {query}"
     )
     extraction_payload = {
         "contents": [{"parts": [{"text": extraction_prompt}]}],
