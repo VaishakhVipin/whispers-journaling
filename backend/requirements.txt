@@ -1,10 +1,7 @@
 fastapi
-uvicorn[standard]
-httpx
-websockets
+uvicorn
 python-dotenv
-numpy
-scipy
-assemblyai
+supabase
+requests
 algoliasearch
-google-generative  # for Gemini-compatible API proxying
+pydantic[email]
