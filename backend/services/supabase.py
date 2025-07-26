@@ -3,8 +3,28 @@ from supabase import create_client, Client
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# Validate environment variables
+if not SUPABASE_URL:
+    raise ValueError("SUPABASE_URL environment variable is not set")
+if not SUPABASE_KEY:
+    raise ValueError("SUPABASE_KEY environment variable is not set")
+
+print(f"Initializing Supabase client with URL: {SUPABASE_URL}")
+print(f"Supabase key type: {'Service Role' if SUPABASE_KEY.startswith('eyJ') and len(SUPABASE_KEY) > 100 else 'Anon Key'}")
+
+try:
+    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    print("Supabase client initialized successfully")
+except Exception as e:
+    print(f"Error initializing Supabase client: {e}")
+    raise
 
 def insert_session(session_id, date, created_at):
-    data = {"session_id": session_id, "date": date, "created_at": created_at}
-    supabase.table("sessions").insert(data).execute() 
+    try:
+        data = {"session_id": session_id, "date": date, "created_at": created_at}
+        result = supabase.table("sessions").insert(data).execute()
+        return result
+    except Exception as e:
+        print(f"Error inserting session: {e}")
+        raise 
